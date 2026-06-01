@@ -46,7 +46,8 @@ class GenFlappy(gl.Contract):
         
         self.player_active_game[player] = self.game_counter
         
-        prompt = """You are a creative narrator for GenFlappy, a blockchain validator game.
+        def leader_fn():
+            prompt = """You are a creative narrator for GenFlappy, a blockchain validator game.
 Generate a unique flight theme for a new game session.
 The theme MUST reference one of these blockchain concepts:
 zero knowledge proofs, optimistic rollups, MEV bots, validator slashing,
@@ -56,8 +57,6 @@ Write EXACTLY ONE sentence. Maximum 15 words.
 Make it dramatic and funny, like an epic journey announcement.
 Example: "Today you fly through the MEV Mempool — where bots eat validators for breakfast."
 Respond with the sentence only. No quotes. No extra text."""
-        
-        def leader_fn():
             return gl.nondet.exec_prompt(prompt).strip()
 
         def validator_fn(leader_result) -> bool:
@@ -84,10 +83,11 @@ Respond with the sentence only. No quotes. No extra text."""
         count = self.game_checkpoint_count.get(game_id, u256(0))
         self.game_checkpoint_count[game_id] = count + u256(1)
         
-        prompt = """You are a ruthless judge in the GenFlappy Validator Games.
+        def leader_fn():
+            prompt = """You are a ruthless judge in the GenFlappy Validator Games.
 A Validator Bird is at score """ + str(current_score) + """ and requesting a mid-flight boost.
 Return your response as a JSON object with EXACTLY these keys:
-"verdict": (boost or penalty fallback)
+"verdict": "boost" or "penalty"
 "amount": (a whole number between 5 and 25)
 "reason": (one sentence, funny, blockchain-themed, max 20 words)
 
@@ -97,8 +97,6 @@ Rules for your decision:
 - If score is above 50: give boost 70% of the time (bird is doing well)
 - Reference gas fees, validators, MEV bots, or consensus in the REASON
 - Be dramatic but follow the format exactly"""
-
-        def leader_fn():
             return gl.nondet.exec_prompt(prompt, response_format='json')
 
         def validator_fn(leader_result) -> bool:
@@ -138,7 +136,8 @@ Rules for your decision:
         theme = self.player_last_theme.get(player, "the blockchain void")
         new_best_str = "YES" if is_new_best else "NO"
         
-        prompt = """You are a legendary blockchain historian writing post-flight reports for GenFlappy.
+        def leader_fn():
+            prompt = """You are a legendary blockchain historian writing post-flight reports for GenFlappy.
 A Validator Bird just crashed. Stats:
 Score: """ + str(score) + """
 Pipes passed: """ + str(pipes_passed) + """
@@ -157,8 +156,6 @@ Choose the verdict from EXACTLY this list based on the score:
 You may override the verdict by one level up if it was a new personal best.
 
 Return your response in JSON format with exactly two keys: "report" (the 2 sentences) and "verdict" (the single chosen word)."""
-
-        def leader_fn():
             return gl.nondet.exec_prompt(prompt, response_format='json')
 
         def validator_fn(leader_result) -> bool:
@@ -215,7 +212,10 @@ Return your response in JSON format with exactly two keys: "report" (the 2 sente
             score = self.lb_scores[idx]
             verdict = self.lb_verdicts[idx]
             
-            res += '{"rank":' + str(idx + 1) + ',"address":"' + addr + '","score":' + str(score) + ',"verdict":"' + verdict + '"}'
+            addr_escaped = addr.replace('"', '\\"')
+            verdict_escaped = verdict.replace('"', '\\"')
+            
+            res += '{"rank":' + str(idx + 1) + ',"address":"' + addr_escaped + '","score":' + str(score) + ',"verdict":"' + verdict_escaped + '"}'
             idx += 1
             if idx < len(self.lb_addresses):
                 res += ","
