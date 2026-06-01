@@ -1,8 +1,7 @@
 import genlayer as gl
 from genlayer import DynArray, TreeMap, u256
 
-@gl.contract
-class GenFlappy:
+class GenFlappy(gl.Contract):
     # Player stats
     player_best_score: TreeMap[str, u256]
     player_total_games: TreeMap[str, u256]
@@ -58,7 +57,17 @@ Make it dramatic and funny, like an epic journey announcement.
 Example: "Today you fly through the MEV Mempool — where bots eat validators for breakfast."
 Respond with the sentence only. No quotes. No extra text."""
         
-        theme = gl.exec_prompt(prompt).strip()
+        def leader_fn():
+            return gl.nondet.exec_prompt(prompt).strip()
+
+        def validator_fn(leader_result) -> bool:
+            if not isinstance(leader_result, gl.vm.Return):
+                return False
+            result = leader_result.calldata
+            return isinstance(result, str) and len(result.strip()) > 0
+
+        theme = gl.vm.run_nondet_unsafe(leader_fn, validator_fn)
+        
         self.game_theme[game_id] = theme
         self.player_last_theme[player] = theme
         return theme
@@ -77,10 +86,10 @@ Respond with the sentence only. No quotes. No extra text."""
         
         prompt = """You are a ruthless judge in the GenFlappy Validator Games.
 A Validator Bird is at score """ + str(current_score) + """ and requesting a mid-flight boost.
-You must respond in EXACTLY this format with no other text:
-VERDICT: [write only the word boost or only the word penalty]
-AMOUNT: [write only a whole number between 5 and 25]
-REASON: [write one sentence, funny, blockchain-themed, max 20 words]
+Return your response as a JSON object with EXACTLY these keys:
+"verdict": (boost or penalty fallback)
+"amount": (a whole number between 5 and 25)
+"reason": (one sentence, funny, blockchain-themed, max 20 words)
 
 Rules for your decision:
 - If score is below 20: give penalty 70% of the time (bird is struggling)
@@ -89,7 +98,23 @@ Rules for your decision:
 - Reference gas fees, validators, MEV bots, or consensus in the REASON
 - Be dramatic but follow the format exactly"""
 
-        return gl.exec_prompt(prompt)
+        def leader_fn():
+            return gl.nondet.exec_prompt(prompt, response_format='json')
+
+        def validator_fn(leader_result) -> bool:
+            if not isinstance(leader_result, gl.vm.Return):
+                return False
+            data = leader_result.calldata
+            return (
+                isinstance(data, dict)
+                and data.get("verdict") in ("boost", "penalty")
+                and isinstance(data.get("amount"), int)
+                and 5 <= data["amount"] <= 25
+                and isinstance(data.get("reason"), str)
+            )
+
+        result = gl.vm.run_nondet_unsafe(leader_fn, validator_fn)
+        return "VERDICT: " + str(result['verdict']) + "\nAMOUNT: " + str(result['amount']) + "\nREASON: " + str(result['reason'])
 
     @gl.public.write
     def submit_score(self, player: str, score: u256, pipes_passed: u256, flight_seconds: u256) -> str:
@@ -123,25 +148,36 @@ New personal best: """ + new_best_str + """
 
 Write a dramatic, poetic, funny flight report in exactly 2 sentences.
 Reference the flight theme and blockchain concepts naturally.
-Then on a NEW LINE write ONLY one verdict word in ALL CAPS.
 Choose the verdict from EXACTLY this list based on the score:
-- Score 0 to 9: write DISASTROUS
-- Score 10 to 24: write ROOKIE
-- Score 25 to 49: write DECENT
-- Score 50 to 99: write EPIC
-- Score 100 or above: write LEGENDARY
+- Score 0 to 9: DISASTROUS
+- Score 10 to 24: ROOKIE
+- Score 25 to 49: DECENT
+- Score 50 to 99: EPIC
+- Score 100 or above: LEGENDARY
 You may override the verdict by one level up if it was a new personal best.
-The last line must contain ONLY the verdict word. Nothing else on that line."""
 
-        response = gl.exec_prompt(prompt)
-        lines = response.strip().split("\n")
+Return your response in JSON format with exactly two keys: "report" (the 2 sentences) and "verdict" (the single chosen word)."""
+
+        def leader_fn():
+            return gl.nondet.exec_prompt(prompt, response_format='json')
+
+        def validator_fn(leader_result) -> bool:
+            if not isinstance(leader_result, gl.vm.Return):
+                return False
+            data = leader_result.calldata
+            if not isinstance(data, dict):
+                return False
+            verdict = data.get("verdict")
+            valid_verdicts = ["LEGENDARY", "EPIC", "DECENT", "ROOKIE", "DISASTROUS"]
+            return (
+                isinstance(data.get("report"), str)
+                and verdict in valid_verdicts
+            )
+
+        response = gl.vm.run_nondet_unsafe(leader_fn, validator_fn)
         
-        verdict = ""
-        report_body = ""
-        
-        if len(lines) > 0:
-            verdict = lines[-1].strip().upper()
-            report_body = "\n".join(lines[:-1]).strip()
+        verdict = response.get("verdict", "")
+        report_body = response.get("report", "")
         
         valid_verdicts = ["LEGENDARY", "EPIC", "DECENT", "ROOKIE", "DISASTROUS"]
         if verdict not in valid_verdicts:
