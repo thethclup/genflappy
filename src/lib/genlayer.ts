@@ -30,15 +30,14 @@ export async function startGame(player: string): Promise<string> {
   if (client && CONTRACT_ADDRESS !== '0x0000000000000000000000000000000000000000') {
     try {
       // Assuming client has a write method
-      const tx = await client.writeContract({
+      const txHash = await client.writeContract({
         address: CONTRACT_ADDRESS,
         functionName: 'start_game',
         args: [player],
         account: player
       });
-      // In a real scenario, we might need to wait for tx and parse events/return value
-      // For now, we'll return a mock theme if we can't get the return value easily
-      return "A validator bird navigates the treacherous mempool of the Bradbury testnet.";
+      const receipt = await client.waitForTransactionReceipt({ hash: txHash });
+      return receipt.result as string;
     } catch (e: any) {
       if (e.message?.includes('can not get contract state') || e.message?.includes('running contract failed') || e.message?.includes('gen_call') || e.details?.includes('can not get contract state')) {
         console.warn(`Contract ${CONTRACT_ADDRESS} not found or invalid on Bradbury testnet. Please deploy contracts/genflappy.py and update VITE_CONTRACT_ADDRESS in .env.local. Using mock data.`);
@@ -55,12 +54,14 @@ export async function startGame(player: string): Promise<string> {
 export async function submitCheckpoint(player: string, score: number, checkpointId: number): Promise<string> {
   if (client && CONTRACT_ADDRESS !== '0x0000000000000000000000000000000000000000') {
     try {
-      await client.writeContract({
+      const txHash = await client.writeContract({
         address: CONTRACT_ADDRESS,
         functionName: 'submit_checkpoint',
         args: [player, score, checkpointId],
         account: player
       });
+      const receipt = await client.waitForTransactionReceipt({ hash: txHash });
+      return receipt.result as string;
     } catch (e: any) {
       if (e.message?.includes('can not get contract state') || e.message?.includes('running contract failed') || e.message?.includes('gen_call') || e.details?.includes('can not get contract state')) {
         console.warn(`Contract ${CONTRACT_ADDRESS} not found or invalid on Bradbury testnet. Please deploy contracts/genflappy.py and update VITE_CONTRACT_ADDRESS in .env.local. Using mock data.`);
@@ -80,12 +81,14 @@ export async function submitCheckpoint(player: string, score: number, checkpoint
 export async function submitScore(player: string, score: number, pipes: number, seconds: number): Promise<string> {
   if (client && CONTRACT_ADDRESS !== '0x0000000000000000000000000000000000000000') {
     try {
-      await client.writeContract({
+      const txHash = await client.writeContract({
         address: CONTRACT_ADDRESS,
         functionName: 'submit_score',
         args: [player, score, pipes, seconds],
         account: player
       });
+      const receipt = await client.waitForTransactionReceipt({ hash: txHash });
+      return receipt.result as string;
     } catch (e: any) {
       if (e.message?.includes('can not get contract state') || e.message?.includes('running contract failed') || e.message?.includes('gen_call') || e.details?.includes('can not get contract state')) {
         console.warn(`Contract ${CONTRACT_ADDRESS} not found or invalid on Bradbury testnet. Please deploy contracts/genflappy.py and update VITE_CONTRACT_ADDRESS in .env.local. Using mock data.`);
