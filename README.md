@@ -32,15 +32,36 @@ In GenFlappy, you play as a "Validator Bird" navigating through consensus node "
 └── package.json         # Dependencies and build scripts
 ```
 
-## 🚀 Getting Started
+## 🚀 Getting Started (GitHub & Local)
+
+If you have cloned this repository from GitHub, you will need to set up your environment variables before running the game.
 
 ### 1. Install Dependencies
 ```bash
 npm install
 ```
 
-### 2. Deploy the Intelligent Contract
-You need to deploy the GenFlappy contract to a GenLayer testnet (e.g., Bradbury) using the GenLayer CLI.
+### 2. Environment Setup (.env.local)
+We use a `.env.local` file to store the smart contract address. This file is ignored by Git, so you must create it locally.
+
+Copy the example environment file:
+```bash
+cp .env.example .env.local
+```
+
+Then edit `.env.local` and add the live GenFlappy contract address, for example:
+```env
+VITE_CONTRACT_ADDRESS="0x5F5E09Ae44a00562B52B983fdFfd69f423e39a3e"
+```
+
+### 3. Run the Dev Server
+```bash
+npm run dev
+```
+Make sure you have a Web3 wallet (like MetaMask) installed and connected to the GenLayer Testnet to play!
+
+### 4. (Optional) Deploy Your Own Contract
+If you want to deploy your own instance of the GenFlappy intelligent contract:
 
 ```bash
 # Setup network and account
@@ -51,24 +72,7 @@ npx genlayer account use flappy-deployer
 # Deploy the contract
 npx genlayer deploy --contract contracts/genflappy.py
 ```
-
-### 3. Environment Setup
-Copy the `.env.example` file to create `.env.local` and paste the deployed contract address:
-
-```bash
-cp .env.example .env.local
-```
-
-Edit your `.env.local`:
-```env
-VITE_CONTRACT_ADDRESS="<YOUR_NEWLY_DEPLOYED_CONTRACT_ADDRESS>"
-```
-
-### 4. Run the Dev Server
-```bash
-npm run dev
-```
-Make sure you have a Web3 wallet (like MetaMask) installed and connected to the GenLayer Testnet to play!
+Then update the `VITE_CONTRACT_ADDRESS` in your `.env.local` with the new address.
 
 ## 📜 Smart Contract Highlights (`contracts/genflappy.py`)
 
