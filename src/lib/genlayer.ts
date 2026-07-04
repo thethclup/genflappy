@@ -33,7 +33,7 @@ export async function startGame(player: string): Promise<string> {
       const txHash = await client.writeContract({
         address: CONTRACT_ADDRESS,
         functionName: 'start_game',
-        args: [player],
+        args: [],
         account: player
       });
       const receipt = await client.waitForTransactionReceipt({ hash: txHash });
@@ -57,7 +57,7 @@ export async function submitCheckpoint(player: string, score: number, checkpoint
       const txHash = await client.writeContract({
         address: CONTRACT_ADDRESS,
         functionName: 'submit_checkpoint',
-        args: [player, score, checkpointId],
+        args: [score, checkpointId],
         account: player
       });
       const receipt = await client.waitForTransactionReceipt({ hash: txHash });
@@ -84,7 +84,7 @@ export async function submitScore(player: string, score: number, pipes: number, 
       const txHash = await client.writeContract({
         address: CONTRACT_ADDRESS,
         functionName: 'submit_score',
-        args: [player, score, pipes, seconds],
+        args: [score, pipes, seconds],
         account: player
       });
       const receipt = await client.waitForTransactionReceipt({ hash: txHash });

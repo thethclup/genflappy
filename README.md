@@ -6,10 +6,11 @@ In GenFlappy, you play as a "Validator Bird" navigating through consensus node "
 
 ## 🌟 Key Features
 
-* **AI-Generated Game Themes:** When you start a game, the GenLayer smart contract triggers an LLM to generate a unique, dramatic flight theme based on blockchain concepts (e.g., *Zero-Knowledge Proofs*, *MEV Mempools*, *Gas Wars*).
-* **Mid-Flight AI Verdicts (Checkpoints):** When you request a boost, an on-chain AI judge decides your fate. Are you struggling below a certain score? You might get a penalty. Flying high? You get a boost. The AI provides a reason for its decision in real-time.
-* **Intelligent Flight Reports:** Hitting a pipe triggers the final evaluation. The smart contract writes a poetic, epic flight report of your demise and assigns a verdict (`LEGENDARY`, `EPIC`, `DECENT`, `ROOKIE`, or `DISASTROUS`).
-* **On-Chain Leaderboard:** A global `TreeMap` state stores player high scores and displays the top 10 validators of the network.
+* **AI-Generated Game Themes:** When you start a game, the GenLayer smart contract triggers an LLM to generate a unique, dramatic flight theme based on blockchain concepts.
+* **Mid-Flight AI Verdicts (Checkpoints):** When you request a boost, an on-chain AI judge decides your fate based on your performance, providing a blockchain-themed reason.
+* **Intelligent Flight Reports & Anti-Cheat:** Hitting a pipe triggers the final evaluation. The smart contract evaluates your score, checks for physical impossibilities using AI semantic analysis (e.g., passing 100 pipes in 2 seconds), and catches cheaters. Honest players get a poetic flight report.
+* **Semantic Validator Consensus:** The Equivalence Principle validators don't just check JSON shapes—they semantically analyze the leader's generated text to ensure it makes sense and follows the prompt instructions!
+* **On-Chain Leaderboard:** A global `TreeMap` state stores player high scores and displays the top 10 validators of the network, protected by `msg.sender` verification.
 
 ## 🛠️ Tech Stack
 

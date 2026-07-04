@@ -1,7 +1,7 @@
-import genlayer as gl
-from genlayer import DynArray, TreeMap, u256
+import json
+from genlayer import *
 
-class GenFlappy(gl.Contract):
+class GenFlappy(Contract):
     # Player stats
     player_best_score: TreeMap[str, u256]
     player_total_games: TreeMap[str, u256]
@@ -33,8 +33,9 @@ class GenFlappy(gl.Contract):
         self.game_counter = u256(0)
         self.total_tx_count = u256(0)
 
-    @gl.public.write
-    def start_game(self, player: str) -> str:
+    @public.write
+    def start_game(self) -> str:
+        player = msg.sender
         self.game_counter += u256(1)
         self.total_tx_count += u256(1)
         
@@ -57,22 +58,29 @@ Write EXACTLY ONE sentence. Maximum 15 words.
 Make it dramatic and funny, like an epic journey announcement.
 Example: "Today you fly through the MEV Mempool — where bots eat validators for breakfast."
 Respond with the sentence only. No quotes. No extra text."""
-            return gl.nondet.exec_prompt(prompt).strip()
+            return nondet.exec_prompt(prompt).strip()
 
         def validator_fn(leader_result) -> bool:
-            if not isinstance(leader_result, gl.vm.Return):
+            if not isinstance(leader_result, vm.Return):
                 return False
-            result = leader_result.calldata
-            return isinstance(result, str) and len(result.strip()) > 0
+            theme = leader_result.calldata
+            if not isinstance(theme, str) or len(theme.strip()) == 0:
+                return False
+            
+            # Semantic Correctness verification!
+            val_prompt = f"Is the following theme a dramatic single sentence referencing blockchain concepts (like MEV, gas, validators, etc.) suitable for a game? Theme: '{theme}'. Reply EXACTLY with YES or NO."
+            val = nondet.exec_prompt(val_prompt).strip().upper()
+            return val == "YES"
 
-        theme = gl.vm.run_nondet_unsafe(leader_fn, validator_fn)
+        theme = vm.run_nondet_unsafe(leader_fn, validator_fn)
         
         self.game_theme[game_id] = theme
         self.player_last_theme[player] = theme
         return theme
 
-    @gl.public.write
-    def submit_checkpoint(self, player: str, current_score: u256, checkpoint_id: u256) -> str:
+    @public.write
+    def submit_checkpoint(self, current_score: u256, checkpoint_id: u256) -> str:
+        player = msg.sender
         self.total_tx_count += u256(1)
         game_id_num = self.player_active_game.get(player, u256(0))
         game_id = str(game_id_num)
@@ -97,25 +105,30 @@ Rules for your decision:
 - If score is above 50: give boost 70% of the time (bird is doing well)
 - Reference gas fees, validators, MEV bots, or consensus in the REASON
 - Be dramatic but follow the format exactly"""
-            return gl.nondet.exec_prompt(prompt, response_format='json')
+            return nondet.exec_prompt(prompt, response_format='json')
 
         def validator_fn(leader_result) -> bool:
-            if not isinstance(leader_result, gl.vm.Return):
+            if not isinstance(leader_result, vm.Return):
                 return False
             data = leader_result.calldata
-            return (
-                isinstance(data, dict)
+            if not (isinstance(data, dict)
                 and data.get("verdict") in ("boost", "penalty")
                 and isinstance(data.get("amount"), int)
                 and 5 <= data["amount"] <= 25
-                and isinstance(data.get("reason"), str)
-            )
+                and isinstance(data.get("reason"), str)):
+                return False
+                
+            # Semantic Correctness verification!
+            val_prompt = f"Does this reason creatively reference blockchain concepts (like gas, validators, MEV)? Reason: '{data['reason']}'. Reply EXACTLY with YES or NO."
+            val = nondet.exec_prompt(val_prompt).strip().upper()
+            return val == "YES"
 
-        result = gl.vm.run_nondet_unsafe(leader_fn, validator_fn)
+        result = vm.run_nondet_unsafe(leader_fn, validator_fn)
         return "VERDICT: " + str(result['verdict']) + "\nAMOUNT: " + str(result['amount']) + "\nREASON: " + str(result['reason'])
 
-    @gl.public.write
-    def submit_score(self, player: str, score: u256, pipes_passed: u256, flight_seconds: u256) -> str:
+    @public.write
+    def submit_score(self, score: u256, pipes_passed: u256, flight_seconds: u256) -> str:
+        player = msg.sender
         self.total_tx_count += u256(1)
         game_id_num = self.player_active_game.get(player, u256(0))
         game_id = str(game_id_num)
@@ -130,14 +143,12 @@ Rules for your decision:
         
         best = self.player_best_score.get(player, u256(0))
         is_new_best = score > best
-        if is_new_best:
-            self.player_best_score[player] = score
             
         theme = self.player_last_theme.get(player, "the blockchain void")
         new_best_str = "YES" if is_new_best else "NO"
         
         def leader_fn():
-            prompt = """You are a legendary blockchain historian writing post-flight reports for GenFlappy.
+            prompt = """You are a legendary blockchain historian and auditor writing post-flight reports for GenFlappy.
 A Validator Bird just crashed. Stats:
 Score: """ + str(score) + """
 Pipes passed: """ + str(pipes_passed) + """
@@ -145,8 +156,8 @@ Flight duration: """ + str(flight_seconds) + """ seconds
 Flight theme: """ + theme + """
 New personal best: """ + new_best_str + """
 
-Write a dramatic, poetic, funny flight report in exactly 2 sentences.
-Reference the flight theme and blockchain concepts naturally.
+First, verify the gameplay plausibility. If the score is mathematically or physically impossible (e.g. 100 pipes in 2 seconds), you MUST set "verdict" to "CHEATER" and "report" to "Fraud detected. Invalid gameplay physics."
+Otherwise, write a dramatic, poetic, funny flight report in exactly 2 sentences referencing the theme.
 Choose the verdict from EXACTLY this list based on the score:
 - Score 0 to 9: DISASTROUS
 - Score 10 to 24: ROOKIE
@@ -156,27 +167,31 @@ Choose the verdict from EXACTLY this list based on the score:
 You may override the verdict by one level up if it was a new personal best.
 
 Return your response in JSON format with exactly two keys: "report" (the 2 sentences) and "verdict" (the single chosen word)."""
-            return gl.nondet.exec_prompt(prompt, response_format='json')
+            return nondet.exec_prompt(prompt, response_format='json')
 
         def validator_fn(leader_result) -> bool:
-            if not isinstance(leader_result, gl.vm.Return):
+            if not isinstance(leader_result, vm.Return):
                 return False
             data = leader_result.calldata
             if not isinstance(data, dict):
                 return False
             verdict = data.get("verdict")
-            valid_verdicts = ["LEGENDARY", "EPIC", "DECENT", "ROOKIE", "DISASTROUS"]
-            return (
-                isinstance(data.get("report"), str)
-                and verdict in valid_verdicts
-            )
+            report = data.get("report")
+            valid_verdicts = ["LEGENDARY", "EPIC", "DECENT", "ROOKIE", "DISASTROUS", "CHEATER"]
+            if not (isinstance(report, str) and verdict in valid_verdicts):
+                return False
+            
+            # Semantic Correctness verification!
+            val_prompt = f"The player claims {score} score by passing {pipes_passed} pipes in {flight_seconds} seconds. The leader assigned verdict '{verdict}' and wrote report '{report}'. Is this evaluation plausible and fair? Reply EXACTLY with YES or NO."
+            val = nondet.exec_prompt(val_prompt).strip().upper()
+            return val == "YES"
 
-        response = gl.vm.run_nondet_unsafe(leader_fn, validator_fn)
+        response = vm.run_nondet_unsafe(leader_fn, validator_fn)
         
         verdict = response.get("verdict", "")
         report_body = response.get("report", "")
         
-        valid_verdicts = ["LEGENDARY", "EPIC", "DECENT", "ROOKIE", "DISASTROUS"]
+        valid_verdicts = ["LEGENDARY", "EPIC", "DECENT", "ROOKIE", "DISASTROUS", "CHEATER"]
         if verdict not in valid_verdicts:
             if score >= u256(100):
                 verdict = "LEGENDARY"
@@ -192,18 +207,19 @@ Return your response in JSON format with exactly two keys: "report" (the 2 sente
         self.player_last_report[player] = report_body
         self.player_last_verdict[player] = verdict
         
-        if is_new_best:
+        if verdict != "CHEATER" and is_new_best:
+            self.player_best_score[player] = score
             self._update_leaderboard(player, score, verdict)
             
         return report_body + "\nVERDICT: " + verdict
 
-    @gl.public.view
+    @public.view
     def get_flight_report(self, player: str) -> str:
         report = self.player_last_report.get(player, "No flights recorded yet.")
         verdict = self.player_last_verdict.get(player, "UNRANKED")
         return report + "\nVERDICT: " + verdict
 
-    @gl.public.view
+    @public.view
     def get_leaderboard(self) -> str:
         res = "["
         idx = 0
@@ -222,7 +238,7 @@ Return your response in JSON format with exactly two keys: "report" (the 2 sente
         res += "]"
         return res
 
-    @gl.public.view
+    @public.view
     def get_player_stats(self, player: str) -> str:
         best = self.player_best_score.get(player, u256(0))
         games = self.player_total_games.get(player, u256(0))
@@ -237,7 +253,7 @@ Return your response in JSON format with exactly two keys: "report" (the 2 sente
         
         return '{"address":"' + player + '","best_score":' + str(best) + ',"total_games":' + str(games) + ',"total_pipes":' + str(pipes) + ',"last_theme":"' + theme_escaped + '","last_report":"' + report_escaped + '","last_verdict":"' + verdict_escaped + '"}'
 
-    @gl.public.view
+    @public.view
     def get_total_games(self) -> u256:
         return self.game_counter
 
